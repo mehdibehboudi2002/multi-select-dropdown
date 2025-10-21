@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DropdownOption } from "../../components/MultiSelectDropdown/MultiSelectDropdown.types";
 
 interface UseMultiSelectStateResult {

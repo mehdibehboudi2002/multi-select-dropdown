@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { MultiSelectDropdownProps, DropdownOption, BaseMultiSelectDropdownProps } from './MultiSelectDropdown.types';
 import { useMultiSelectState } from '../../hooks/MultiSelectDropdown/useMultiSelectState';
+import './MultiSelectDropdown.scss';
 
 const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
     options,
@@ -16,6 +17,7 @@ const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
     showCheckbox = false,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
     const [searchValue, setSearchValue] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -23,7 +25,11 @@ const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
+                setIsClosing(true);
+                setTimeout(() => {
+                    setIsOpen(false);
+                    setIsClosing(false);
+                }, 100);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -58,7 +64,12 @@ const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
     const handleDropdownClick = (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
         if (target.closest('.chip') || target.closest('.chip-remove')) return;
-        setIsOpen(prev => !prev);
+
+        setIsClosing(true);
+        setTimeout(() => {
+            setIsOpen(prev => !prev);
+            setIsClosing(false);
+        }, 100);
     };
 
     const handleRemoveChip = (id: string, e: React.MouseEvent) => {
@@ -73,7 +84,11 @@ const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
 
             // Otherwise, select the new item and close the dropdown
             onSelectionChange([id]);
-            setIsOpen(false);
+            setIsClosing(true);
+            setTimeout(() => {
+                setIsOpen(false);
+                setIsClosing(false);
+            }, 100);
         } else {
             if (selectedIds.includes(id)) {
                 onSelectionChange(selectedIds.filter(selectedId => selectedId !== id));
@@ -118,7 +133,7 @@ const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
 
     return (
         <div className={`multi-select-dropdown`} ref={dropdownRef}>
-            <div className="dropdown-header" onClick={handleDropdownClick}>
+            <div className={`dropdown-header ${isOpen ? 'open' : ''}`} onClick={handleDropdownClick}>
                 {selectedOptions.length === 0 && placeholder}
                 <div className="selected-chips-container">
                     {selectedOptions.map(option => (
@@ -145,7 +160,7 @@ const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
 
 
             {isOpen && (
-                <div className="dropdown-menu">
+                <div className={`dropdown-menu ${isClosing ? 'closing' : ''}`}>
                     {searchable && (
                         <div className="dropdown-search-section">
                             <div className="search-input-wrapper">
@@ -173,59 +188,79 @@ const BaseMultiSelectDropdown: React.FC<BaseMultiSelectDropdownProps> = ({
                         </div>
                     )}
 
-                    {!singleSelection && enableSelectAll && (options.length > 0 || filteredOptions.length > 0) && (
-                        <div
-                            className="dropdown-item select-all-item"
-                            onClick={handleSelectAll}
-                        >
-                            <input
-                                type="checkbox"
-                                className="select-all-checkbox"
-                                checked={allSelected}
-                                onChange={() => { }}
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                            <span className="item-text">Select All</span>
-                        </div>
-                    )}
+                    <div className="dropdown-content-scroll">
+                        {!singleSelection && enableSelectAll && (options.length > 0 || filteredOptions.length > 0) && (
+                            <div
+                                className="dropdown-item select-all-item"
+                                onClick={handleSelectAll}
+                            >
+                                <input
+                                    type="checkbox"
+                                    className="select-all-checkbox"
+                                    checked={allSelected}
+                                    onChange={(e) => {
+                                        e.stopPropagation();
+                                        handleSelectAll();
+                                    }}
+                                />
+                                <span className="item-text">Select All</span>
+                            </div>
+                        )}
 
-                    {filteredOptions.length > 0 ? (
-                        <div className="options-list">
-                            {filteredOptions.map(option => {
-                                const isSelected = selectedIds.includes(option.id);
-                                return (
-                                    <div
-                                        key={option.id}
-                                        className={`dropdown-item ${isSelected ? 'selected' : ''}`}
-                                        onClick={() => handleItemClick(option.id)}
-                                    >
-                                        {showCheckbox && (
-                                            <input
-                                                type="checkbox"
-                                                className="item-checkbox"
-                                                checked={isSelected}
-                                                onChange={() => { }}
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        )}
-                                        <span className="item-text">
-                                            {option.label} {option.emoji}
-                                        </span>
-                                        {isSelected && <span className="checkmark">✓</span>}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : searchValue.trim() && searchable ? (
-                        <div className="no-results">
-                            <span>No results found</span>
-                            {enableAdd && <span className="hint">Press + or Enter to add "{searchValue}"</span>}
-                        </div>
-                    ) : !searchable && options.length === 0 ? (
-                        <div className="no-results">
-                            <span>No options available</span>
-                        </div>
-                    ) : null}
+                        {filteredOptions.length > 0 ? (
+                            <div className="options-list">
+                                {filteredOptions.map(option => {
+                                    const isSelected = selectedIds.includes(option.id);
+                                    return (
+                                        <div
+                                            key={option.id}
+                                            className={`dropdown-item ${isSelected ? 'selected' : ''}`}
+                                            onClick={() => handleItemClick(option.id)}
+                                        >
+                                            {showCheckbox && (
+                                                <input
+                                                    type="checkbox"
+                                                    className="item-checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => { }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                />
+                                            )}
+                                            <span className="item-text">
+                                                {option.label} {option.emoji}
+                                            </span>
+                                            {isSelected && (
+                                                <span className="checkmark">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        width="17"
+                                                        height="17"
+                                                        fill="none"
+                                                        stroke="#7a9aff"
+                                                        strokeWidth="3"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                    >
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : searchValue.trim() && searchable ? (
+                            <div className="no-results">
+                                <span>No results found</span>
+                                {enableAdd && <span className="hint">Press + or Enter to add "{searchValue}"</span>}
+                            </div>
+                        ) : !searchable && options.length === 0 ? (
+                            <div className="no-results">
+                                <span>No options available</span>
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
             )}
         </div>
